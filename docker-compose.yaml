@@ -1,0 +1,52 @@
+version: '3.9'
+
+services:
+  grpc-backend:
+    image: erpya/adempiere-grpc-server:master
+    container_name: adempiere-backend
+    stdin_open: true
+    tty: true
+    environment:
+      - SERVER_PORT=50059
+      - IS_ENABLED_ALL_SERVICES=true
+      - SECRET_KEY=A42CF908019918B1D9D9E04E596658345D162D4C0127A4C8365E8BDF6B015CC7
+      - SERVER_LOG_LEVEL=WARNING
+      - TZ="America/Caracas"
+      # Consider the host and network where the docker server is located
+      - DB_TYPE=PostgreSQL
+      - DB_HOST=postgres_host
+      - DB_PORT=5432
+      - DB_NAME=adempiere
+      - DB_USER=adempiere
+      - DB_PASSWORD=adempiere
+    ports:
+      - 50059:50059
+
+  api-rest:
+    image: solopcloud/adempiere-proxy:alpine
+    container_name: adempiere-proxy
+    stdin_open: true
+    tty: true
+    environment:
+      - SERVER_PORT=8085
+      - AD_DEFAULT_HOST=adempiere-backend
+      - AD_DEFAULT_PORT=50059
+      - SCHEDULER_HOST="http://localhost:8080"
+      - TZ="America/Caracas"
+    ports:
+      - 8085:8085
+
+  vue-app:
+    image: solopcloud/adempiere-vue:alpine
+    container_name: adempiere-frontend
+    depends_on:
+      - api-rest
+      - grpc-backend
+    stdin_open: true
+    tty: true
+    environment:
+      # Set the ip or dns of the server (not the dns of the container) to access from other client hosts
+      - API_URL=http://localhost:8085/api/adempiere/
+      - TZ="America/Caracas"
+    ports:
+      - 9526:80
